@@ -89,9 +89,6 @@ class Redis
       end
 
       # NOT IMPLEMENTED:
-      # * blpop
-      # * brpop
-      # * brpoplpush
       # * subscribe
       # * psubscribe
       # * publish
@@ -409,9 +406,28 @@ class Redis
         data[key].pop
       end
 
+      def brpop(keys, timeout=0)
+        #todo threaded mode
+        keys = Array(keys)
+        keys.each do |key|
+          if data[key] && data[key].size > 0
+            return [key, data[key].pop]
+          end
+        end
+        sleep(timeout.to_f)
+        nil
+      end
+
       def rpoplpush(key1, key2)
         data_type_check(key1, Array)
         rpop(key1).tap do |elem|
+          lpush(key2, elem) unless elem.nil?
+        end
+      end
+
+      def brpoplpush(key1, key2, opts={})
+        data_type_check(key1, Array)
+        brpop(key1).tap do |elem|
           lpush(key2, elem) unless elem.nil?
         end
       end
@@ -420,6 +436,18 @@ class Redis
         data_type_check(key, Array)
         return unless data[key]
         data[key].shift
+      end
+
+      def blpop(keys, timeout=0)
+        #todo threaded mode
+        keys = Array(keys)
+        keys.each do |key|
+          if data[key] && data[key].size > 0
+            return [key, data[key].shift]
+          end
+        end
+        sleep(timeout.to_f)
+        nil
       end
 
       def smembers(key)
